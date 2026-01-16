@@ -1,7 +1,7 @@
 import os
 import telebot
 from flask import Flask, request
-from gigachat import GigachatClient
+from gigachat.sync_client import GigaChatSyncClient  # Импортируем синхронный клиент
 from dotenv import load_dotenv
 
 # Загрузка переменных окружения
@@ -13,7 +13,7 @@ BOT_ID = int(os.getenv('TELEGRAM_BOT_ID'))
 
 # Создание объектов
 bot = telebot.TeleBot(API_TOKEN)
-client = GigachatClient(api_key=CHAT_GPT_API_KEY)
+client = GigaChatSyncClient(api_key=CHAT_GPT_API_KEY)  # Синхронный клиент
 
 # Список пользователей с VIP-доступом
 vip_users = set()
