@@ -1,7 +1,7 @@
 import os
 import telebot
 from flask import Flask, request
-from gigachat.sync_client import GigaChatSyncClient  # Импортируем синхронный клиент
+from requests import post
 from dotenv import load_dotenv
 
 # Загрузка переменных окружения
@@ -13,10 +13,19 @@ BOT_ID = int(os.getenv('TELEGRAM_BOT_ID'))
 
 # Создание объектов
 bot = telebot.TeleBot(API_TOKEN)
-client = GigaChatSyncClient(api_key=CHAT_GPT_API_KEY)  # Синхронный клиент
 
 # Список пользователей с VIP-доступом
 vip_users = set()
+
+# Функция отправки запроса в GigaChat через API
+def gigachat_request(prompt):
+    headers = {
+        "Authorization": f"Bearer {CHAT_GPT_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {"prompt": prompt}
+    response = post("https://api.gigachat.ru/v1/completions", json=payload, headers=headers)
+    return response.json()['choices'][0]['text'] if response.status_code == 200 else "Ошибка обработки запроса."
 
 # Команда "/start"
 @bot.message_handler(commands=["start"])
@@ -48,7 +57,7 @@ def grant_vip_access(message):
 def handle_message(message):
     if message.from_user.id in vip_users or message.from_user.id == ADMIN_ID:
         # Отправляем запрос в GigaChat через API
-        response = client.complete(prompt=message.text).text
+        response = gigachat_request(message.text)
         bot.reply_to(message, response)
     else:
         bot.reply_to(message, "У Вас нет доступа к этому боту.\nОбратитесь к администратору @Ivanka58.")
