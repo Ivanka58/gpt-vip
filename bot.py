@@ -49,7 +49,7 @@ def grant_vip_access(message):
                 return
         bot.reply_to(message, f"Пользователь '{username}' не найден.")
     else:
-        bot.reply_to(message, "Формат неверный!\nИспользуйте: /VIP @username")
+        bot.reply_to(message, "Формат неверный!\nИспользуйте: `/VIP @username`")
 
 # Обработка обычных сообщений
 @bot.message_handler(func=lambda m: True)
@@ -62,7 +62,8 @@ def handle_message(message):
         bot.reply_to(message, "У Вас нет доступа к этому боту.\nОбратитесь к администратору @Ivanka58.")
 
 # Настройки веб-хука для Heroku/Render
-server = Flask(name)
+server = Flask(__name__)  # Передача правильного аргумента
+
 WEBHOOK_PORT = int(os.environ.get('PORT', 8080))  # Порт для вебхуков
 WEBHOOK_URL_BASE = f"https://{os.getenv('RENDER_DOMAIN_NAME')}"  # Доменное имя Render
 WEBHOOK_URL_PATH = f"/webhook/{API_TOKEN}/"
@@ -79,5 +80,5 @@ def webhook():
     return '', 200
 
 # Запуск сервера
-if name == "main":
+if __name__ == "__main__":
     server.run(host='0.0.0.0', port=WEBHOOK_PORT)
