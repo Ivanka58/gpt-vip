@@ -8,8 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 API_TOKEN = os.getenv('TELEGRAM_API_TOKEN')
 CHAT_GPT_API_KEY = os.getenv('CHAT_GPT_API_KEY')
-ADMIN_ID = int(os.getenv('ADMIN_TELEGRAM_ID'))
-BOT_ID = int(os.getenv('TELEGRAM_BOT_ID'))
+ADMIN_ID = int(os.getenv('ADMIN_TELEGRAM_ID'))  # Ваше собственное ID администратора
 
 # Создание объектов
 bot = telebot.TeleBot(API_TOKEN)
@@ -40,15 +39,15 @@ def start_command(message):
 def grant_vip_access(message):
     if len(message.text.split()) > 1:
         username = message.text.split()[1].lstrip("@")  # Удаляем символ "@"
-        # Поиск пользователя по имени
-        users = bot.get_chat_members(BOT_ID)
-        target_user = next((member for member in users if member.user.username == username), None)
-        if target_user:
-            vip_users.add(target_user.user.id)
-            bot.reply_to(message, f"Выполнено! Пользователь {target_user.user.first_name} получил VIP-доступ.")
-            bot.send_message(target_user.user.id, "Администратор выдал Вам VIP-доступ!\nТеперь Вы можете пользоваться ботом без ограничений.")
-        else:
-            bot.reply_to(message, f"Пользователь '{username}' не найден.")
+        users = bot.get_chat_members_count(message.chat.id)
+        for i in range(users):
+            user = bot.get_chat_member(message.chat.id, i)
+            if user.user.username == username:
+                vip_users.add(user.user.id)
+                bot.reply_to(message, f"Выполнено! Пользователь {user.user.first_name} получил VIP-доступ.")
+                bot.send_message(user.user.id, "Администратор выдал Вам VIP-доступ!\nТеперь Вы можете пользоваться ботом без ограничений.")
+                return
+        bot.reply_to(message, f"Пользователь '{username}' не найден.")
     else:
         bot.reply_to(message, "Формат неверный!\nИспользуйте: /VIP @username")
 
