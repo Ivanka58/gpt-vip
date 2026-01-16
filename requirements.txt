@@ -1,4 +1,7 @@
-aiogram==2.*
-aiohttp==3.*
-python-dotenv==0.*
-uvicorn==0.*
+pyTelegramBotAPI
+psycopg2-binary
+flask
+python-dotenv
+pytz
+gigachat
+gunicorn
