@@ -1,6 +1,5 @@
 import os
 import telebot
-from flask import Flask, request
 from requests import post
 from dotenv import load_dotenv
 
@@ -49,7 +48,7 @@ def grant_vip_access(message):
                 return
         bot.reply_to(message, f"Пользователь '{username}' не найден.")
     else:
-        bot.reply_to(message, "Формат неверный!\nИспользуйте: `/VIP @username`")
+        bot.reply_to(message, "Формат неверный!\nИспользуйте: /VIP @username")
 
 # Обработка обычных сообщений
 @bot.message_handler(func=lambda m: True)
@@ -61,24 +60,6 @@ def handle_message(message):
     else:
         bot.reply_to(message, "У Вас нет доступа к этому боту.\nОбратитесь к администратору @Ivanka58.")
 
-# Настройки веб-хука для Heroku/Render
-server = Flask(__name__)  # Передача правильного аргумента
-
-WEBHOOK_PORT = int(os.environ.get('PORT', 8080))  # Порт для вебхуков
-WEBHOOK_URL_BASE = f"https://{os.getenv('RENDER_DOMAIN_NAME')}"  # Доменное имя Render
-WEBHOOK_URL_PATH = f"/webhook/{API_TOKEN}/"
-
-# Регистрация хука
-bot.remove_webhook()
-bot.set_webhook(url=WEBHOOK_URL_BASE + WEBHOOK_URL_PATH)
-
-# Маршрутизация запросов
-@server.route('/' + WEBHOOK_URL_PATH, methods=['POST'])
-def webhook():
-    update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
-    bot.process_new_updates([update])
-    return '', 200
-
-# Запуск сервера
-if __name__ == "__main__":
-    server.run(host='0.0.0.0', port=WEBHOOK_PORT)
+# Полностью отключаем Webhook и включаем Long Polling
+if name == "main":
+    bot.polling(none_stop=True)
