@@ -61,5 +61,5 @@ def handle_message(message):
         bot.reply_to(message, "У Вас нет доступа к этому боту.\nОбратитесь к администратору @Ivanka58.")
 
 # Полностью отключаем Webhook и включаем Long Polling
-if name == "_main_":
+if name == "__main__":
     bot.polling(none_stop=True)
