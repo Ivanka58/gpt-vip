@@ -1,7 +1,9 @@
 import os
 import telebot
+from threading import Thread
 from requests import post
 from dotenv import load_dotenv
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -59,6 +61,21 @@ def handle_message(message):
         bot.reply_to(message, response)
     else:
         bot.reply_to(message, "У Вас нет доступа к этому боту.\nОбратитесь к администратору @Ivanka58.")
+
+# Простой фиктивный сервер для удовлетворения требований Render
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+
+def run_server():
+    PORT = int(os.environ.get('PORT', 8080))
+    server_address = ('0.0.0.0', PORT)
+    httpd = HTTPServer(server_address, SimpleHTTPRequestHandler)
+    httpd.serve_forever()
+
+# Запуск фиктивного сервера в отдельном потоке
+Thread(target=run_server, daemon=True).start()
 
 # Полностью отключаем Webhook и включаем Long Polling
 if __name__ == "__main__":
