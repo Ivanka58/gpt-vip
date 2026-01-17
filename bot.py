@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import certifi  # Добавляем для поддержки TLS
 import urllib3  # Для обработки соединений
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -30,7 +31,7 @@ def gigachat_request(prompt):
     payload = {"prompt": prompt}
     timeout_seconds = 15  # Таймаут увеличен до 15 секунд
     try:
-        # Используйте современный SSL-контекст
+        # Использование современного SSL-контекста
         response = post("https://api.gigachat.ru/v1/completions", json=payload, headers=headers, verify=certifi.where(), timeout=timeout_seconds)
         if response.status_code == 200:
             return response.json()['choices'][0]['text'].strip()
@@ -47,9 +48,9 @@ def start_command(message):
                           "Но чтобы я знал, что ты попал сюда не случайно,\n"
                           "напиши @Ivanka58 для получения доступа.")
 
-# Команда выдачи VIP-доступа
+# Промежуточное подтверждение выдачи VIP-доступа
 @bot.message_handler(commands=["VIP"], func=lambda m: m.chat.id == ADMIN_ID)
-def grant_vip_access(message):
+def confirm_vip_access(message):
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
         bot.reply_to(message, "Формат неверный!\nИспользуйте: `/VIP <UserID>`")
@@ -58,11 +59,27 @@ def grant_vip_access(message):
     user_id = parts[1].strip()  # Чистый UserID
     try:
         user_id = int(user_id)  # Конвертировать в целое число
-        vip_users.add(user_id)
-        bot.reply_to(message, f"Выполнено! Пользователю с ID {user_id} предоставлен VIP-доступ.")
-        bot.send_message(user_id, "Администратор выдал Вам VIP-доступ!\nТеперь Вы можете пользоваться ботом без ограничений.")
+        keyboard = InlineKeyboardMarkup(row_width=2)
+        button_yes = InlineKeyboardButton("Да", callback_data=f"confirm:vip:{user_id}")
+        button_no = InlineKeyboardButton("Нет", callback_data="decline:vip")
+        keyboard.add(button_yes, button_no)
+        bot.reply_to(message, f"Вы хотите выдать VIP-доступ пользователю с ID {user_id}?", reply_markup=keyboard)
     except ValueError:
         bot.reply_to(message, "Некорректный ID пользователя. Используйте целые числа.")
+
+# Обработка нажатия кнопок подтверждения
+@bot.callback_query_handler(func=lambda call: True)
+def handle_confirmation(call):
+    if call.data.startswith("confirm"):
+        _, command, user_id = call.data.split(":")
+        user_id = int(user_id)
+        vip_users.add(user_id)
+        bot.answer_callback_query(call.id, text="VIP-доступ успешно выдан!")
+        bot.send_message(user_id, "Администратор выдал Вам VIP-доступ!\nТеперь Вы можете пользоваться ботом без ограничений.")
+        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
+    elif call.data == "decline:vip":
+        bot.answer_callback_query(call.id, text="Операция отменена.")
+        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
 
 # Обработка обычных сообщений
 @bot.message_handler(func=lambda m: True)
