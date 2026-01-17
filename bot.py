@@ -38,26 +38,37 @@ def start_command(message):
 # Команда выдачи VIP-доступа
 @bot.message_handler(commands=["VIP"], func=lambda m: m.chat.id == ADMIN_ID)
 def grant_vip_access(message):
-    if len(message.text.split()) > 1:
-        username = message.text.split()[1].lstrip("@")  # Удаляем символ "@"
-        users = bot.get_chat_members_count(message.chat.id)
-        for i in range(users):
-            user = bot.get_chat_member(message.chat.id, i)
-            if user.user.username == username:
-                vip_users.add(user.user.id)
-                bot.reply_to(message, f"Выполнено! Пользователь {user.user.first_name} получил VIP-доступ.")
-                bot.send_message(user.user.id, "Администратор выдал Вам VIP-доступ!\nТеперь Вы можете пользоваться ботом без ограничений.")
-                return
-        bot.reply_to(message, f"Пользователь '{username}' не найден.")
-    else:
-        bot.reply_to(message, "Формат неверный!\nИспользуйте: /VIP @username")
+    parts = message.text.split(maxsplit=1)
+    if len(parts) != 2:
+        bot.reply_to(message, "Формат неверный!\nИспользуйте: `/VIP @username`")
+        return
+
+    username = parts[1].lstrip("@").lower()  # Преобразование к нижнему регистру для точного сравнения
+    users = bot.get_chat_members_count(message.chat.id)
+    found = False
+
+    for i in range(users):
+        user = bot.get_chat_member(message.chat.id, i)
+        if user.user.username.lower() == username:
+            vip_users.add(user.user.id)
+            bot.reply_to(message, f"Выполнено! Пользователь {user.user.first_name} получил VIP-доступ.")
+            bot.send_message(user.user.id, "Администратор выдал Вам VIP-доступ!\nТеперь Вы можете пользоваться ботом без ограничений.")
+            found = True
+            break
+
+    if not found:
+        bot.reply_to(message, f"Пользователь '{parts[1]}' не найден.")
 
 # Обработка обычных сообщений
 @bot.message_handler(func=lambda m: True)
 def handle_message(message):
     if message.from_user.id in vip_users or message.from_user.id == ADMIN_ID:
+        # Показываем статус ожидания
+        msg = bot.reply_to(message, "AI думает...")
         # Отправляем запрос в GigaChat через API
         response = gigachat_request(message.text)
+        # Отвечаем и удаляем временное сообщение
+        bot.delete_message(msg.chat.id, msg.message_id)
         bot.reply_to(message, response)
     else:
         bot.reply_to(message, "У Вас нет доступа к этому боту.\nОбратитесь к администратору @Ivanka58.")
@@ -77,6 +88,18 @@ def run_server():
 # Запуск фиктивного сервера в отдельном потоке
 Thread(target=run_server, daemon=True).start()
 
-# Полностью отключаем Webhook и включаем Long Polling
+# Включаем Long Polling
 if __name__ == "__main__":
     bot.polling(none_stop=True)
+Что улучшилось:
+Команды и запросы стали корректно обрабатываться:
+
+Теперь команда /VIP ищет пользователей по правильному критерию (регистр букв не важен).
+Сообщение "AI думает..." появляется и исчезает вовремя, освобождая экран от временных сообщений.
+Простой фиктивный сервер:
+
+Оставлен тот же фиктивный сервер, который слушает трафик на порте, указанном в переменной окружения PORT, чтобы удовлетворить требование Render иметь открытым хотя бы один порт.
+Следующие шаги:
+Размести исправленные файлы на сервере Render.
+Проверь функциональность бота: отправь разные типы сообщений и попробуй выполнить команду /VIP.
+Если появятся дополнительные вопросы или возникнут трудности, не стесняйся обращаться!
