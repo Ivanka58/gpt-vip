@@ -4,6 +4,7 @@ from threading import Thread
 from requests import post
 from dotenv import load_dotenv
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import time
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -24,8 +25,15 @@ def gigachat_request(prompt):
         "Content-Type": "application/json",
     }
     payload = {"prompt": prompt}
-    response = post("https://api.gigachat.ru/v1/completions", json=payload, headers=headers)
-    return response.json()['choices'][0]['text'] if response.status_code == 200 else "Ошибка обработки запроса."
+    timeout_seconds = 15  # Таймаут увеличен до 15 секунд
+    try:
+        response = post("https://api.gigachat.ru/v1/completions", json=payload, headers=headers, timeout=timeout_seconds)
+        if response.status_code == 200:
+            return response.json()['choices'][0]['text'].strip()
+        else:
+            return "Ошибка обработки запроса."
+    except Exception as e:
+        return str(e)
 
 # Команда "/start"
 @bot.message_handler(commands=["start"])
@@ -44,17 +52,20 @@ def grant_vip_access(message):
         return
 
     username = parts[1].lstrip("@").lower()  # Преобразование к нижнему регистру для точного сравнения
-    users = bot.get_chat_members_count(message.chat.id)
     found = False
 
-    for i in range(users):
-        user = bot.get_chat_member(message.chat.id, i)
-        if user.user.username.lower() == username:
-            vip_users.add(user.user.id)
-            bot.reply_to(message, f"Выполнено! Пользователь {user.user.first_name} получил VIP-доступ.")
-            bot.send_message(user.user.id, "Администратор выдал Вам VIP-доступ!\nТеперь Вы можете пользоваться ботом без ограничений.")
-            found = True
-            break
+    # Получаем список членов группы или чата, если применимо
+    try:
+        members = bot.get_chat_members(message.chat.id)
+        for member in members:
+            if member.user.username.lower() == username:
+                vip_users.add(member.user.id)
+                bot.reply_to(message, f"Выполнено! Пользователь {member.user.first_name} получил VIP-доступ.")
+                bot.send_message(member.user.id, "Администратор выдал Вам VIP-доступ!\nТеперь Вы можете пользоваться ботом без ограничений.")
+                found = True
+                break
+    except Exception as e:
+        bot.reply_to(message, f"Ошибка при выполнении операции: {e}")
 
     if not found:
         bot.reply_to(message, f"Пользователь '{parts[1]}' не найден.")
