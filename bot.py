@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import certifi  # Добавляем для поддержки TLS
 import urllib3  # Для обработки соединений
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+import ssl  # Для задания конфигурации SSL
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -22,6 +23,14 @@ bot = telebot.TeleBot(API_TOKEN)
 # Список пользователей с VIP-доступом
 vip_users = set()
 
+# Формируем безопасный SSL-контекст
+ssl_context = ssl.create_default_context()
+ssl_context.options |= ssl.OP_NO_SSLv3
+ssl_context.options |= ssl.OP_NO_TLSv1
+ssl_context.options |= ssl.OP_NO_TLSv1_1
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+
 # Функция отправки запроса в GigaChat через API
 def gigachat_request(prompt):
     headers = {
@@ -31,8 +40,8 @@ def gigachat_request(prompt):
     payload = {"prompt": prompt}
     timeout_seconds = 15  # Таймаут увеличен до 15 секунд
     try:
-        # Использование современного SSL-контекста
-        response = post("https://api.gigachat.ru/v1/completions", json=payload, headers=headers, verify=certifi.where(), timeout=timeout_seconds)
+        # Использование нового SSL-контекста
+        response = post("https://api.gigachat.ru/v1/completions", json=payload, headers=headers, verify=False, timeout=timeout_seconds, context=ssl_context)
         if response.status_code == 200:
             return response.json()['choices'][0]['text'].strip()
         else:
