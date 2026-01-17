@@ -1,13 +1,13 @@
 import os
 import telebot
 from threading import Thread
-from requests import post
+from requests import Session
 from dotenv import load_dotenv
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-import urllib3  # Для отключения предупреждений
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import ssl
+import requests.adapters
+from requests.packages.urllib3.util.ssl_ import create_urllib3_context
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -21,6 +21,12 @@ bot = telebot.TeleBot(API_TOKEN)
 # Список пользователей с VIP-доступом
 vip_users = set()
 
+# Формируем SSL-контекст с минимальным уровнем TLSv1.2
+ssl_context = create_urllib3_context(minimum_version=ssl.TLSVersion.TLSv1_2)
+adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10, max_retries=3, pool_block=True, ssl_context=ssl_context)
+session = Session()
+session.mount('https://', adapter)
+
 # Функция отправки запроса в GigaChat через API
 def gigachat_request(prompt):
     headers = {
@@ -30,8 +36,7 @@ def gigachat_request(prompt):
     payload = {"prompt": prompt}
     timeout_seconds = 15  # Таймаут увеличен до 15 секунд
     try:
-        # Используем стандартный способ SSL-подключения
-        response = post("https://api.gigachat.ru/v1/completions", json=payload, headers=headers, verify=True, timeout=timeout_seconds)
+        response = session.post("https://api.gigachat.ru/v1/completions", json=payload, headers=headers, timeout=timeout_seconds)
         if response.status_code == 200:
             return response.json()['choices'][0]['text'].strip()
         else:
