@@ -22,7 +22,7 @@ bot = telebot.TeleBot(API_TOKEN)
 vip_users = set()
 
 # Формируем SSL-контекст с минимальным уровнем TLSv1.2
-ssl_context = create_urllib3_context(minimum_version=ssl.TLSVersion.TLSv1_2)
+ssl_context = create_urllib3_context(ssl_minimum_version=ssl.TLSVersion.TLSv1_2)
 adapter = requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=10, max_retries=3, pool_block=True, ssl_context=ssl_context)
 session = Session()
 session.mount('https://', adapter)
