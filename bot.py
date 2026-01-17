@@ -4,7 +4,10 @@ from threading import Thread
 from requests import post
 from dotenv import load_dotenv
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import time
+import certifi  # Добавляем для поддержки TLS
+import urllib3  # Для обработки соединений
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -27,7 +30,8 @@ def gigachat_request(prompt):
     payload = {"prompt": prompt}
     timeout_seconds = 15  # Таймаут увеличен до 15 секунд
     try:
-        response = post("https://api.gigachat.ru/v1/completions", json=payload, headers=headers, timeout=timeout_seconds)
+        # Используйте современный SSL-контекст
+        response = post("https://api.gigachat.ru/v1/completions", json=payload, headers=headers, verify=certifi.where(), timeout=timeout_seconds)
         if response.status_code == 200:
             return response.json()['choices'][0]['text'].strip()
         else:
@@ -48,27 +52,17 @@ def start_command(message):
 def grant_vip_access(message):
     parts = message.text.split(maxsplit=1)
     if len(parts) != 2:
-        bot.reply_to(message, "Формат неверный!\nИспользуйте: `/VIP @username`")
+        bot.reply_to(message, "Формат неверный!\nИспользуйте: `/VIP <UserID>`")
         return
 
-    username = parts[1].lstrip("@").lower()  # Преобразование к нижнему регистру для точного сравнения
-    found = False
-
-    # Получаем список членов группы или чата, если применимо
+    user_id = parts[1].strip()  # Чистый UserID
     try:
-        members = bot.get_chat_members(message.chat.id)
-        for member in members:
-            if member.user.username.lower() == username:
-                vip_users.add(member.user.id)
-                bot.reply_to(message, f"Выполнено! Пользователь {member.user.first_name} получил VIP-доступ.")
-                bot.send_message(member.user.id, "Администратор выдал Вам VIP-доступ!\nТеперь Вы можете пользоваться ботом без ограничений.")
-                found = True
-                break
-    except Exception as e:
-        bot.reply_to(message, f"Ошибка при выполнении операции: {e}")
-
-    if not found:
-        bot.reply_to(message, f"Пользователь '{parts[1]}' не найден.")
+        user_id = int(user_id)  # Конвертировать в целое число
+        vip_users.add(user_id)
+        bot.reply_to(message, f"Выполнено! Пользователю с ID {user_id} предоставлен VIP-доступ.")
+        bot.send_message(user_id, "Администратор выдал Вам VIP-доступ!\nТеперь Вы можете пользоваться ботом без ограничений.")
+    except ValueError:
+        bot.reply_to(message, "Некорректный ID пользователя. Используйте целые числа.")
 
 # Обработка обычных сообщений
 @bot.message_handler(func=lambda m: True)
